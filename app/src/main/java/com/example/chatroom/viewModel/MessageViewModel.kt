@@ -5,69 +5,83 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.chatroom.data.Message
-import com.example.chatroom.data.MessageRepository
+import com.example.chatroom.repository.MessageRepository
 import com.example.chatroom.data.Result
 import com.example.chatroom.data.User
-import com.example.chatroom.data.UserRepository
+import com.example.chatroom.repository.UserRepository
 import com.google.firebase.auth.FirebaseAuth
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 
 class MessageViewModel : ViewModel() {
 
-    private val messageRepository: MessageRepository
-    private val userRepository: UserRepository
+    private val messageRepository: MessageRepository = MessageRepository(Injection.instance())
+    private val firebaseAuth = FirebaseAuth.getInstance()
+
+    private val userRepository : UserRepository = UserRepository(
+        firebaseAuth,
+        Injection.instance()
+    )
+
+    // --- StateFlow Declarations ---
+    // StateFlow is generally preferred over LiveData for Jetpack Compose apps.
+    // It requires an initial value, which makes state management more predictable.
+
+    private val _messages = MutableStateFlow<List<Message>>(emptyList())
+    val messages: StateFlow<List<Message>> get() = _messages
+
+    private val _roomId = MutableStateFlow<String?>(null)
+
+    private val _currentUser = MutableStateFlow<User?>(null)
+    val currentUser: StateFlow<User?> get() = _currentUser
+
     init {
-        messageRepository = MessageRepository(Injection.instance())
-        userRepository = UserRepository(
-            FirebaseAuth.getInstance(),
-            Injection.instance()
-        )
+        // Load the user immediately. This is synchronous and doesn't need a coroutine.
         loadCurrentUser()
     }
-    private val _messages = MutableLiveData<List<Message>>()
-    val messages: LiveData<List<Message>> get() = _messages
-
-    private val _roomId = MutableLiveData<String>()
-    private val _currentUser = MutableLiveData<User>()
-    val currentUser: LiveData<User> get() = _currentUser
 
     fun setRoomId(roomId: String) {
         _roomId.value = roomId
         loadMessages()
     }
 
-    private fun loadCurrentUser() {
-        viewModelScope.launch {
-            when (val result = userRepository.getCurrentUser()) {
-                is Result.Success -> _currentUser.value = result.data
-                else -> {
-
-                }
-            }
-        }
-    }
     fun loadMessages() {
+        // Ensure roomId is not null before proceeding
+        val currentRoomId = _roomId.value ?: return
+
         viewModelScope.launch {
-            messageRepository.getChatMessages(_roomId.value.toString())
-                .collect { _messages.value = it }
+            messageRepository.getChatMessages(currentRoomId)
+                .collect { messageList ->
+                    _messages.value = messageList
+                }
         }
     }
 
     fun sendMessage(text: String) {
-        if (_currentUser.value != null) {
-            val message = Message(
-                senderFirstName = _currentUser.value!!.firstName,
-                senderId = _currentUser.value!!.email,
-                text = text
-            )
-            viewModelScope.launch {
-                when (messageRepository.sendMessage(_roomId.value.toString(), message)) {
-                    is Result.Success -> Unit
-                    else ->{
+        // Ensure both roomId and the user are available before sending
+        val currentRoomId = _roomId.value ?: return
+        val user = _currentUser.value ?: return
 
-                    }
-                }
-            }
+        val message = Message(
+            senderFirstName = user.firstName,
+            senderId = user.email,
+            text = text
+        )
+
+        viewModelScope.launch {
+            // You can handle the result here if you need to show an error, etc.
+            messageRepository.sendMessage(currentRoomId, message)
+        }
+    }
+
+    private fun loadCurrentUser() {
+        // Launch a coroutine to fetch the detailed user profile
+        viewModelScope.launch {
+            // Call your repository to get the full user object from Firestore
+            val userProfile = userRepository.getCurrentUserFromFirestore()
+            _currentUser.value = userProfile
         }
     }
 }

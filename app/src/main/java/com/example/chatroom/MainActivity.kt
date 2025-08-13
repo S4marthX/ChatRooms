@@ -28,50 +28,10 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            val authViewModel : AuthViewModel = viewModel()
-            val navController : NavHostController = rememberNavController()
             ChatRoomTheme {
-                NavigationGraph(navController,authViewModel)
+                AppNavigator()
             }
         }
     }
 }
 
-@RequiresApi(Build.VERSION_CODES.O)
-@Composable
-fun NavigationGraph(
-    navController: NavHostController,
-    authViewModel: AuthViewModel
-){
-    NavHost(
-        navController = navController,
-        startDestination = Screen.SignupScreen.route
-    ) {
-        composable(Screen.SignupScreen.route) {
-            SignUpScreen(
-                authViewModel = authViewModel,
-                onNavigateToLogin = {
-                navController.navigate(Screen.LoginScreen.route)
-            })
-        }
-        composable(Screen.LoginScreen.route) {
-            LoginScreen (
-                authViewModel = authViewModel,
-                onNavigateToSignup = {
-                navController.navigate(Screen.SignupScreen.route)
-            }){
-                navController.navigate(Screen.ChatroomScreen.route)
-            }
-        }
-        composable(Screen.ChatroomScreen.route) {
-            ChatRoomListScreen(
-                onJoinClicked = {navController.navigate("${Screen.ChatsScreen.route}/${it.id}")}
-            )
-        }
-        composable("${Screen.ChatsScreen.route}/{roomId}") {
-            val roomId: String = it
-                .arguments?.getString("roomId") ?: ""
-            ChatScreen(roomId = roomId)
-        }
-    }
-}

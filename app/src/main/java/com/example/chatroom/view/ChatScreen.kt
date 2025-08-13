@@ -1,5 +1,6 @@
 package com.example.chatroom.view
 
+import android.annotation.SuppressLint
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
@@ -21,6 +22,8 @@ import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -36,17 +39,22 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.chatroom.R
 import com.example.chatroom.data.Message
-import com.example.chatroom.data.formatTimestamp
+import com.example.chatroom.util.formatTimestamp
 import com.example.chatroom.viewModel.MessageViewModel
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun ChatScreen(roomId : String,
-               messageViewModel : MessageViewModel = viewModel()){
+fun ChatScreen(
+    roomId : String,
+    messageViewModel : MessageViewModel = viewModel()
+){
+    LaunchedEffect(key1 = roomId) {
+        messageViewModel.setRoomId(roomId)
+    }
     val text = remember { mutableStateOf("") }
-    val message by messageViewModel.messages.observeAsState(emptyList())
     val focusManager = LocalFocusManager.current
-    messageViewModel.setRoomId(roomId)
+    val message by messageViewModel.messages.collectAsState()
+    val currentUser by messageViewModel.currentUser.collectAsState()
 
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp)
@@ -58,7 +66,7 @@ fun ChatScreen(roomId : String,
         ){
             items(message){message ->
                 ChatItem(message = message.copy(
-                    isSentByCurrentUser = message.senderId == messageViewModel.currentUser.value?.email
+                    isSentByCurrentUser = message.senderId == currentUser?.email
                 ))
             }
         }

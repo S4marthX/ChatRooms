@@ -1,4 +1,4 @@
-package com.example.chatroom.data
+package com.example.chatroom.util
 
 import android.os.Build
 import androidx.annotation.RequiresApi

@@ -73,7 +73,7 @@ With a clean MVVM architecture, and Material 3 design, the app offers a modern, 
 ---
 ## Download
 
-[⬇️ Download APK](https://drive.google.com/file/d/133s2bzId-9FUmyEb5ISOdW-dcQmMJC85/view?usp=sharing)
+[⬇️ Download APK](https://drive.google.com/file/d/1GrxYatUTqZ9G1KNq7BX_o-bluxuhcTqE/view?usp=sharing)
 
 ## Getting Started
 
